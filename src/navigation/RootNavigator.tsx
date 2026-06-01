@@ -5,6 +5,7 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { supabase } from '../config/supabase';
 import { useAuthStore } from '../store/authStore';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { registerForPushNotifications } from '../services/notificationsService';
 
 // Heroicons - Outline (unfocused)
 import {
@@ -310,6 +311,7 @@ export default function RootNavigator() {
     if (session?.user) {
       fetchUserProfile(session.user.id);
       checkUserHasPosted(session.user.id);
+      registerForPushNotifications(session.user.id);
     } else {
       setHasPosted(null);
       setProfile(null);

@@ -28,6 +28,7 @@ import Avatar from '../../components/Avatar';
 import LoadingSpinner from '../../components/LoadingSpinner';
 import RatingModal from '../../components/RatingModal';
 import MeetupModal from '../../components/MeetupModal';
+import { sendPushNotification } from '../../services/notificationsService';
 
 const CATEGORY_META: Record<string, { label: string; emoji: string; bg: string; text: string }> = {
   coffee_shop:      { label: 'Coffee Shop',    emoji: '☕', bg: '#fef3c7', text: '#92400e' },
@@ -172,6 +173,15 @@ export default function ChatScreen({ navigation }: Props) {
 
     try {
       await sendMessage(swapId, session.user.id, messageText);
+      // Notify the other party
+      if (swap && session?.user.id) {
+        const amOwner = swap.owner_id === session.user.id;
+        const recipient = amOwner ? swap.requester : swap.owner;
+        const myUsername = amOwner ? swap.owner?.username : swap.requester?.username;
+        if (recipient?.id) {
+          sendPushNotification(recipient.id, `@${myUsername}`, messageText).catch(() => {});
+        }
+      }
     } catch (error) {
       console.error('Error sending message:', error);
       setNewMessage(messageText);

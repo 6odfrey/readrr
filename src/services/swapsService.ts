@@ -1,5 +1,6 @@
 import { supabase } from '../config/supabase';
 import { Swap, VenueCategory } from '../models/Swap';
+import { sendPushNotification } from './notificationsService';
 
 // Check if user can request a swap for a post
 export async function canRequestSwap(userId: string, postId: string): Promise<boolean> {
@@ -104,6 +105,21 @@ export async function acceptSwap(swapId: string): Promise<void> {
     .eq('id', swapId);
 
   if (error) throw error;
+
+  // Notify the requester
+  const { data: swap } = await supabase
+    .from('swaps')
+    .select('requester_id, owner:users!swaps_owner_id_fkey(username)')
+    .eq('id', swapId)
+    .single();
+
+  if (swap) {
+    sendPushNotification(
+      swap.requester_id,
+      'Swap accepted! 🎉',
+      `@${(swap.owner as any)?.username} accepted your swap request`
+    ).catch(() => {});
+  }
 }
 
 // Decline a swap request (owner only)
@@ -235,6 +251,22 @@ export async function proposeMeetup(
     .eq('id', swapId);
 
   if (error) throw error;
+
+  // Notify the other party
+  const { data: swap } = await supabase
+    .from('swaps')
+    .select('requester_id, owner_id, proposer:users!swaps_meetup_proposed_by_fkey(username)')
+    .eq('id', swapId)
+    .single();
+
+  if (swap) {
+    const toUserId = swap.requester_id === proposedById ? swap.owner_id : swap.requester_id;
+    sendPushNotification(
+      toUserId,
+      'Meetup suggested 📍',
+      `@${(swap.proposer as any)?.username} suggested ${venueName} as a meetup spot`
+    ).catch(() => {});
+  }
 }
 
 // Accept the proposed meetup location
@@ -248,6 +280,21 @@ export async function acceptMeetup(swapId: string): Promise<void> {
     .eq('id', swapId);
 
   if (error) throw error;
+
+  // Notify the proposer
+  const { data: swap } = await supabase
+    .from('swaps')
+    .select('meetup_proposed_by, meetup_venue_name, accepter:users!swaps_owner_id_fkey(username)')
+    .eq('id', swapId)
+    .single();
+
+  if (swap?.meetup_proposed_by) {
+    sendPushNotification(
+      swap.meetup_proposed_by,
+      'Meetup confirmed ✅',
+      `Your suggested meetup at ${swap.meetup_venue_name} was accepted!`
+    ).catch(() => {});
+  }
 }
 
 // Reset meetup back to none (either party can clear)

@@ -14,6 +14,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../../config/supabase';
 import { useAuthStore } from '../../store/authStore';
 import { getUserPosts } from '../../services/postsService';
+import { getFollowerCount, getFollowingCount } from '../../services/followsService';
 import { Post } from '../../models/Post';
 import Avatar from '../../components/Avatar';
 import BookCover from '../../components/BookCover';
@@ -31,11 +32,14 @@ export default function ProfileScreen({ navigation }: Props) {
   const [posts, setPosts] = useState<Post[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [activeTab, setActiveTab] = useState<'posts' | 'swaps'>('posts');
+  const [followerCount, setFollowerCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
 
   useFocusEffect(
     useCallback(() => {
       if (profile) {
         loadPosts();
+        loadFollowCounts();
       }
     }, [profile?.id])
   );
@@ -50,6 +54,20 @@ export default function ProfileScreen({ navigation }: Props) {
     }
   };
 
+  const loadFollowCounts = async () => {
+    if (!profile) return;
+    try {
+      const [followers, following] = await Promise.all([
+        getFollowerCount(profile.id),
+        getFollowingCount(profile.id),
+      ]);
+      setFollowerCount(followers);
+      setFollowingCount(following);
+    } catch (error) {
+      console.error('Error loading follow counts:', error);
+    }
+  };
+
   // Filter posts based on active tab
   const socialPosts = posts.filter((p) => p.post_type === 'social');
   const swapPosts = posts.filter((p) => p.post_type === 'swap');
@@ -57,7 +75,7 @@ export default function ProfileScreen({ navigation }: Props) {
 
   const handleRefresh = async () => {
     setRefreshing(true);
-    await loadPosts();
+    await Promise.all([loadPosts(), loadFollowCounts()]);
     setRefreshing(false);
   };
 
@@ -137,34 +155,42 @@ export default function ProfileScreen({ navigation }: Props) {
         </TouchableOpacity>
       </View>
 
-      {/* Stats - Now as tappable tabs */}
-      <View className="flex-row border-y border-gray-200">
+      {/* Follow counts */}
+      <View className="flex-row justify-around py-3 border-b border-gray-100 mx-6">
+        <View className="items-center">
+          <Text style={{ fontSize: 18, fontWeight: '700' }}>{followerCount}</Text>
+          <Text style={{ fontSize: 13, color: '#6b7280' }}>Followers</Text>
+        </View>
+        <View className="items-center">
+          <Text style={{ fontSize: 18, fontWeight: '700' }}>{followingCount}</Text>
+          <Text style={{ fontSize: 13, color: '#6b7280' }}>Following</Text>
+        </View>
+        <View className="items-center">
+          <Text style={{ fontSize: 18, fontWeight: '700', color: '#10b981' }}>{profile.total_swaps || 0}</Text>
+          <Text style={{ fontSize: 13, color: '#6b7280' }}>Swaps</Text>
+        </View>
+        <View className="items-center">
+          <Text style={{ fontSize: 18, fontWeight: '700' }}>{profile.avg_rating?.toFixed(1) || '0.0'}</Text>
+          <Text style={{ fontSize: 13, color: '#6b7280' }}>Rating</Text>
+        </View>
+      </View>
+
+      {/* Post type tabs */}
+      <View className="flex-row border-b border-gray-200">
         <TouchableOpacity
           onPress={() => setActiveTab('posts')}
-          className={`flex-1 py-4 items-center ${activeTab === 'posts' ? 'border-b-2 border-black' : ''}`}
+          className={`flex-1 py-3 items-center ${activeTab === 'posts' ? 'border-b-2 border-black' : ''}`}
         >
           <Text style={{ fontSize: 20, fontWeight: '700' }}>{socialPosts.length}</Text>
           <Text style={{ fontSize: 14, color: activeTab === 'posts' ? '#000' : '#6b7280' }}>Posts</Text>
         </TouchableOpacity>
         <TouchableOpacity
           onPress={() => setActiveTab('swaps')}
-          className={`flex-1 py-4 items-center ${activeTab === 'swaps' ? 'border-b-2 border-black' : ''}`}
+          className={`flex-1 py-3 items-center ${activeTab === 'swaps' ? 'border-b-2 border-black' : ''}`}
         >
           <Text style={{ fontSize: 20, fontWeight: '700' }}>{swapPosts.length}</Text>
           <Text style={{ fontSize: 14, color: activeTab === 'swaps' ? '#000' : '#6b7280' }}>Listed</Text>
         </TouchableOpacity>
-        <View className="flex-1 py-4 items-center border-l border-gray-100">
-          <Text style={{ fontSize: 20, fontWeight: '700', color: '#10b981' }}>
-            {profile.total_swaps || 0}
-          </Text>
-          <Text style={{ fontSize: 14, color: '#6b7280' }}>Completed</Text>
-        </View>
-        <View className="flex-1 py-4 items-center">
-          <Text style={{ fontSize: 20, fontWeight: '700' }}>
-            {profile.avg_rating?.toFixed(1) || '0.0'}
-          </Text>
-          <Text style={{ fontSize: 14, color: '#6b7280' }}>Rating</Text>
-        </View>
       </View>
     </View>
   );

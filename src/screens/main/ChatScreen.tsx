@@ -17,8 +17,10 @@ import { Swap } from '../../models/Swap';
 import { Message } from '../../models/Message';
 import { getSwap, confirmSwapComplete } from '../../services/swapsService';
 import { getMessages, sendMessage, markMessagesAsRead } from '../../services/messagesService';
+import { hasRated } from '../../services/ratingsService';
 import Avatar from '../../components/Avatar';
 import LoadingSpinner from '../../components/LoadingSpinner';
+import RatingModal from '../../components/RatingModal';
 
 interface Props {
   navigation: any;
@@ -35,6 +37,7 @@ export default function ChatScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [completing, setCompleting] = useState(false);
+  const [showRatingModal, setShowRatingModal] = useState(false);
 
   const flatListRef = useRef<FlatList>(null);
 
@@ -176,11 +179,15 @@ export default function ChatScreen({ navigation }: Props) {
               );
 
               if (bothConfirmed) {
-                Alert.alert(
-                  'Swap Complete! 🎉',
-                  'Congratulations! Both users have confirmed. The swap is now complete and your swap count has been updated.',
-                  [{ text: 'OK', onPress: () => navigation.goBack() }]
-                );
+                // Check if user hasn't already rated before showing modal
+                const alreadyRated = await hasRated(swapId, session.user.id);
+                if (!alreadyRated) {
+                  const updatedSwap = await getSwap(swapId);
+                  setSwap(updatedSwap);
+                  setShowRatingModal(true);
+                } else {
+                  navigation.goBack();
+                }
               } else {
                 Alert.alert(
                   'Waiting for Confirmation',
@@ -238,6 +245,9 @@ export default function ChatScreen({ navigation }: Props) {
     return <LoadingSpinner fullScreen />;
   }
 
+  const isOwner = swap.owner_id === session?.user.id;
+  const otherUser = isOwner ? swap.requester : swap.owner;
+
   // If swap is completed, show completion screen
   if (swap.status === 'completed') {
     return (
@@ -263,16 +273,22 @@ export default function ChatScreen({ navigation }: Props) {
             <Text style={{ fontSize: 16, fontWeight: '600', color: '#fff' }}>Done</Text>
           </TouchableOpacity>
         </View>
+        {otherUser && session?.user.id && (
+          <RatingModal
+            visible={showRatingModal}
+            swapId={swapId}
+            raterId={session.user.id}
+            ratedUser={otherUser}
+            onDone={() => { setShowRatingModal(false); navigation.goBack(); }}
+            onSkip={() => { setShowRatingModal(false); navigation.goBack(); }}
+          />
+        )}
       </SafeAreaView>
     );
   }
-
-  const isOwner = swap.owner_id === session?.user.id;
-  const otherUser = isOwner ? swap.requester : swap.owner;
   const myConfirmation = isOwner ? swap.owner_confirmed_complete : swap.requester_confirmed_complete;
   const theirConfirmation = isOwner ? swap.requester_confirmed_complete : swap.owner_confirmed_complete;
   const anyoneConfirmed = myConfirmation || theirConfirmation;
-  const isCompleted = swap.status === 'completed';
 
   return (
     <SafeAreaView className="flex-1 bg-white" edges={['top']}>
@@ -399,6 +415,17 @@ export default function ChatScreen({ navigation }: Props) {
           </View>
         )}
       </KeyboardAvoidingView>
+
+      {otherUser && session?.user.id && (
+        <RatingModal
+          visible={showRatingModal}
+          swapId={swapId}
+          raterId={session.user.id}
+          ratedUser={otherUser}
+          onDone={() => { setShowRatingModal(false); navigation.goBack(); }}
+          onSkip={() => { setShowRatingModal(false); navigation.goBack(); }}
+        />
+      )}
     </SafeAreaView>
   );
 }

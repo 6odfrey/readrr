@@ -12,6 +12,7 @@ import {
   ArrowPathIcon,
   InboxIcon,
   UserIcon,
+  MagnifyingGlassIcon,
 } from 'react-native-heroicons/outline';
 
 // Heroicons - Solid (focused)
@@ -20,6 +21,7 @@ import {
   ArrowPathIcon as ArrowPathIconSolid,
   InboxIcon as InboxIconSolid,
   UserIcon as UserIconSolid,
+  MagnifyingGlassIcon as MagnifyingGlassIconSolid,
 } from 'react-native-heroicons/solid';
 
 // Auth Screens
@@ -33,6 +35,7 @@ import FirstPostScreen from '../screens/onboarding/FirstPostScreen';
 
 // Main Screens
 import FeedScreen from '../screens/main/FeedScreen';
+import SearchScreen from '../screens/main/SearchScreen';
 import CreatePostScreen from '../screens/main/CreatePostScreen';
 import SocialPostScreen from '../screens/main/SocialPostScreen';
 import SwapPostScreen from '../screens/main/SwapPostScreen';
@@ -60,6 +63,7 @@ export type OnboardingStackParamList = {
 
 export type MainTabsParamList = {
   Feed: undefined;
+  Search: undefined;
   Swaps: undefined;
   Inbox: { tab?: 'received' | 'sent' } | undefined;
   Profile: undefined;
@@ -195,6 +199,19 @@ function MainTabs() {
               <HomeIconSolid color={color} size={size} />
             ) : (
               <HomeIcon color={color} size={size} />
+            ),
+        }}
+      />
+      <Tab.Screen
+        name="Search"
+        component={SearchScreen}
+        options={{
+          tabBarLabel: 'Search',
+          tabBarIcon: ({ focused, color, size }) =>
+            focused ? (
+              <MagnifyingGlassIconSolid color={color} size={size} />
+            ) : (
+              <MagnifyingGlassIcon color={color} size={size} />
             ),
         }}
       />

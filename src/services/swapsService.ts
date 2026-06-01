@@ -1,5 +1,5 @@
 import { supabase } from '../config/supabase';
-import { Swap, SwapStatus } from '../models/Swap';
+import { Swap, VenueCategory } from '../models/Swap';
 
 // Check if user can request a swap for a post
 export async function canRequestSwap(userId: string, postId: string): Promise<boolean> {
@@ -79,8 +79,8 @@ export async function getSwap(swapId: string): Promise<Swap | null> {
     .from('swaps')
     .select(`
       *,
-      requester:users!swaps_requester_id_fkey(id, username, avatar_url),
-      owner:users!swaps_owner_id_fkey(id, username, avatar_url),
+      requester:users!swaps_requester_id_fkey(id, username, avatar_url, city),
+      owner:users!swaps_owner_id_fkey(id, username, avatar_url, city),
       post:posts(id, title, author, cover_image_url, image_url)
     `)
     .eq('id', swapId)
@@ -211,6 +211,61 @@ export async function hasPendingRequest(userId: string, postId: string): Promise
   }
 
   return data !== null;
+}
+
+// Propose a meetup location (or counter-propose by overwriting)
+export async function proposeMeetup(
+  swapId: string,
+  proposedById: string,
+  venueName: string,
+  venueCategory: VenueCategory,
+  venueAddress?: string
+): Promise<void> {
+  const { error } = await supabase
+    .from('swaps')
+    .update({
+      meetup_status: 'proposed',
+      meetup_proposed_by: proposedById,
+      meetup_venue_name: venueName,
+      meetup_venue_category: venueCategory,
+      meetup_venue_address: venueAddress || null,
+      meetup_proposed_at: new Date().toISOString(),
+      meetup_agreed_at: null,
+    })
+    .eq('id', swapId);
+
+  if (error) throw error;
+}
+
+// Accept the proposed meetup location
+export async function acceptMeetup(swapId: string): Promise<void> {
+  const { error } = await supabase
+    .from('swaps')
+    .update({
+      meetup_status: 'agreed',
+      meetup_agreed_at: new Date().toISOString(),
+    })
+    .eq('id', swapId);
+
+  if (error) throw error;
+}
+
+// Reset meetup back to none (either party can clear)
+export async function clearMeetup(swapId: string): Promise<void> {
+  const { error } = await supabase
+    .from('swaps')
+    .update({
+      meetup_status: 'none',
+      meetup_proposed_by: null,
+      meetup_venue_name: null,
+      meetup_venue_category: null,
+      meetup_venue_address: null,
+      meetup_proposed_at: null,
+      meetup_agreed_at: null,
+    })
+    .eq('id', swapId);
+
+  if (error) throw error;
 }
 
 // Get unread message count for a swap

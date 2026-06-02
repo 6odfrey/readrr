@@ -2,6 +2,16 @@ import * as Notifications from 'expo-notifications';
 import { Platform } from 'react-native';
 import { supabase } from '../config/supabase';
 
+export interface AppNotification {
+  id: string;
+  user_id: string;
+  title: string;
+  body: string;
+  data: Record<string, any>;
+  read: boolean;
+  created_at: string;
+}
+
 // Show notifications while app is in foreground
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -45,7 +55,7 @@ export async function registerForPushNotifications(userId: string): Promise<void
   }
 }
 
-// Send a push notification to a user via Expo's push service
+// Send a push notification and save it to the in-app notifications table
 export async function sendPushNotification(
   toUserId: string,
   title: string,
@@ -53,6 +63,15 @@ export async function sendPushNotification(
   data?: Record<string, any>
 ): Promise<void> {
   try {
+    // Save to in-app notifications table
+    await supabase.from('notifications').insert({
+      user_id: toUserId,
+      title,
+      body,
+      data: data || {},
+    });
+
+    // Send push via Expo
     const { data: user } = await supabase
       .from('users')
       .select('fcm_token')
@@ -79,4 +98,46 @@ export async function sendPushNotification(
   } catch (error) {
     console.error('Send push notification error:', error);
   }
+}
+
+// Fetch all notifications for a user
+export async function getNotifications(userId: string): Promise<AppNotification[]> {
+  const { data, error } = await supabase
+    .from('notifications')
+    .select('*')
+    .eq('user_id', userId)
+    .order('created_at', { ascending: false })
+    .limit(50);
+
+  if (error) throw error;
+  return data || [];
+}
+
+// Get unread count for badge
+export async function getUnreadCount(userId: string): Promise<number> {
+  const { count, error } = await supabase
+    .from('notifications')
+    .select('*', { count: 'exact', head: true })
+    .eq('user_id', userId)
+    .eq('read', false);
+
+  if (error) return 0;
+  return count || 0;
+}
+
+// Mark a single notification as read
+export async function markNotificationRead(notificationId: string): Promise<void> {
+  await supabase
+    .from('notifications')
+    .update({ read: true })
+    .eq('id', notificationId);
+}
+
+// Mark all notifications as read for a user
+export async function markAllNotificationsRead(userId: string): Promise<void> {
+  await supabase
+    .from('notifications')
+    .update({ read: true })
+    .eq('user_id', userId)
+    .eq('read', false);
 }

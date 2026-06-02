@@ -44,6 +44,7 @@ import BookDetailScreen from '../screens/main/BookDetailScreen';
 import PostDetailScreen from '../screens/main/PostDetailScreen';
 import InboxScreen from '../screens/main/InboxScreen';
 import ChatScreen from '../screens/main/ChatScreen';
+import NotificationsScreen from '../screens/main/NotificationsScreen';
 
 // Profile Screens
 import ProfileScreen from '../screens/profile/ProfileScreen';
@@ -81,6 +82,7 @@ export type MainStackParamList = {
   OtherUserProfile: { userId: string };
   Inbox: { tab?: 'received' | 'sent' };
   Chat: { swapId: string };
+  Notifications: undefined;
 };
 
 const AuthStack = createNativeStackNavigator<AuthStackParamList>();
@@ -275,6 +277,7 @@ function MainNavigator() {
       <MainStack.Screen name="OtherUserProfile" component={OtherUserProfileScreen} />
       <MainStack.Screen name="Inbox" component={InboxScreen} />
       <MainStack.Screen name="Chat" component={ChatScreen} />
+      <MainStack.Screen name="Notifications" component={NotificationsScreen} />
     </MainStack.Navigator>
   );
 }

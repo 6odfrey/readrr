@@ -179,27 +179,7 @@ export async function confirmSwapComplete(
       })
       .eq('id', swapId);
 
-    // Increment total_swaps for requester
-    const { data: requester } = await supabase
-      .from('users')
-      .select('total_swaps')
-      .eq('id', swap.requester_id)
-      .single();
-    await supabase
-      .from('users')
-      .update({ total_swaps: (requester?.total_swaps || 0) + 1 })
-      .eq('id', swap.requester_id);
-
-    // Increment total_swaps for owner
-    const { data: owner } = await supabase
-      .from('users')
-      .select('total_swaps')
-      .eq('id', swap.owner_id)
-      .single();
-    await supabase
-      .from('users')
-      .update({ total_swaps: (owner?.total_swaps || 0) + 1 })
-      .eq('id', swap.owner_id);
+    // total_swaps is incremented by DB trigger (009_total_swaps_trigger.sql)
 
     // Update post availability to 'swapped'
     await supabase

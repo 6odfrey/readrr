@@ -13,7 +13,7 @@ import { Image } from 'expo-image';
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../../config/supabase';
 import { useAuthStore } from '../../store/authStore';
-import { getUserPosts } from '../../services/postsService';
+import { getUserPosts, deletePost, updatePostAvailability } from '../../services/postsService';
 import { getFollowerCount, getFollowingCount } from '../../services/followsService';
 import { Post } from '../../models/Post';
 import Avatar from '../../components/Avatar';
@@ -209,6 +209,69 @@ export default function ProfileScreen({ navigation }: Props) {
     </View>
   );
 
+  const handlePostLongPress = (item: Post) => {
+    const isSwap = item.post_type === 'swap';
+    const isAvailable = item.availability === 'available';
+
+    const options: { text: string; style?: 'destructive' | 'cancel'; onPress?: () => void }[] = [
+      { text: 'Cancel', style: 'cancel' },
+    ];
+
+    if (isSwap && isAvailable) {
+      options.push({
+        text: 'Mark as No Longer Available',
+        onPress: () => {
+          Alert.alert(
+            'Mark as Unavailable',
+            `Remove "${item.title}" from available swaps?`,
+            [
+              { text: 'Cancel', style: 'cancel' },
+              {
+                text: 'Mark Unavailable',
+                onPress: async () => {
+                  try {
+                    await updatePostAvailability(item.id, 'swapped');
+                    loadPosts();
+                  } catch {
+                    Alert.alert('Error', 'Could not update listing.');
+                  }
+                },
+              },
+            ]
+          );
+        },
+      });
+    }
+
+    options.push({
+      text: 'Delete Post',
+      style: 'destructive',
+      onPress: () => {
+        Alert.alert(
+          'Delete Post',
+          `Permanently delete "${item.title}"?`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Delete',
+              style: 'destructive',
+              onPress: async () => {
+                try {
+                  await deletePost(item.id);
+                  loadPosts();
+                } catch {
+                  Alert.alert('Error', 'Could not delete post.');
+                }
+              },
+            },
+          ]
+        );
+      },
+    });
+
+    Alert.alert(item.title, 'What would you like to do?', options);
+  };
+
   const renderBookItem = ({ item }: { item: Post }) => {
     const handlePress = () => {
       if (item.post_type === 'swap') {
@@ -221,6 +284,8 @@ export default function ProfileScreen({ navigation }: Props) {
     return (
       <TouchableOpacity
         onPress={handlePress}
+        onLongPress={() => handlePostLongPress(item)}
+        delayLongPress={400}
         style={{ width: BOOK_WIDTH, height: BOOK_HEIGHT, marginBottom: 8 }}
         className="mx-1"
       >
@@ -237,6 +302,20 @@ export default function ProfileScreen({ navigation }: Props) {
             height={BOOK_HEIGHT}
             style={{ borderRadius: 4 }}
           />
+        )}
+        {/* Unavailable overlay */}
+        {item.post_type === 'swap' && item.availability !== 'available' && (
+          <View style={{
+            ...{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0 },
+            backgroundColor: 'rgba(0,0,0,0.45)',
+            borderRadius: 4,
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700', textAlign: 'center' }}>
+              {item.availability === 'pending' ? 'PENDING' : 'SWAPPED'}
+            </Text>
+          </View>
         )}
       </TouchableOpacity>
     );

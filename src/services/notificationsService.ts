@@ -1,4 +1,5 @@
 import * as Notifications from 'expo-notifications';
+import Constants from 'expo-constants';
 import { Platform } from 'react-native';
 import { supabase } from '../config/supabase';
 
@@ -44,7 +45,13 @@ export async function registerForPushNotifications(userId: string): Promise<void
       });
     }
 
-    const token = (await Notifications.getExpoPushTokenAsync()).data;
+    const projectId =
+      Constants.expoConfig?.extra?.eas?.projectId ??
+      Constants.easConfig?.projectId;
+
+    if (!projectId) return; // skip push token — in-app notifications still work
+
+    const token = (await Notifications.getExpoPushTokenAsync({ projectId })).data;
 
     await supabase
       .from('users')

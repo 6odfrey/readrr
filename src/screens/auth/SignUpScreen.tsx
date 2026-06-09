@@ -88,7 +88,17 @@ export default function SignUpScreen({ navigation }: Props) {
         throw new Error('No user returned');
       }
 
-      // Auth session will be picked up by listener and navigate to onboarding
+      // If email confirmation is enabled in Supabase, session will be null
+      if (!authData.session) {
+        Alert.alert(
+          'Check your email',
+          'We sent a confirmation link to ' + email.toLowerCase().trim() + '. Tap it to activate your account, then come back and sign in.',
+          [{ text: 'OK', onPress: () => navigation.navigate('SignIn') }]
+        );
+        return;
+      }
+
+      // Session is set — listener in RootNavigator will navigate to onboarding
     } catch (error: any) {
       console.error('Sign up error:', error);
       Alert.alert('Error', error.message || 'Failed to create account');

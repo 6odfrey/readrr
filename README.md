@@ -13,7 +13,7 @@ A book-swapping social app built with React Native, Expo, and Supabase. Discover
 
 ### Book Swaps
 - List a book for swap with condition, genre, and swap type (trade / borrow / gift)
-- Scan a book's barcode to auto-fill details via Google Books API
+- Scan a book's barcode to auto-fill details via Google Books API + Open Library fallback
 - Request a swap with an optional message
 - Accept or decline incoming requests from your Inbox
 - Real-time chat to coordinate the exchange
@@ -36,9 +36,11 @@ A book-swapping social app built with React Native, Expo, and Supabase. Discover
 - Follower and following counts
 - Star ratings after each completed swap (1–5 stars with optional comment)
 - Average rating displayed on profiles and search results
+- Long-press a post to delete it or mark it as no longer available
 
-### Push Notifications
-- Swap accepted, new chat message, meetup proposed and confirmed
+### Notifications
+- In-app notification centre with unread badge on the bell icon
+- Notified on: swap accepted, new message, meetup proposed, meetup confirmed
 
 ---
 
@@ -52,7 +54,7 @@ A book-swapping social app built with React Native, Expo, and Supabase. Discover
 | State | Zustand |
 | Navigation | React Navigation v7 |
 | Book data | Google Books API + Open Library API |
-| Maps / Places | Overpass API (OpenStreetMap) |
+| Places | Overpass API (OpenStreetMap) |
 | Push notifications | Expo Notifications |
 
 ---
@@ -61,46 +63,55 @@ A book-swapping social app built with React Native, Expo, and Supabase. Discover
 
 ### Prerequisites
 - Node.js 18+
-- Expo CLI (`npm install -g expo`)
-- A Supabase project
+- [Expo Go](https://expo.dev/go) installed on your phone
+- A free [Supabase](https://supabase.com) account
 
-### Setup
+### 1. Clone and install
 
 ```bash
-# Clone the repo
 git clone https://github.com/6odfrey/readrr.git
 cd readrr
-
-# Install dependencies
 npm install
-
-# Add your environment variables
-# Create a .env file or set these in your Expo config:
-# EXPO_PUBLIC_SUPABASE_URL=your_supabase_url
-# EXPO_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-
-# Run migrations in your Supabase SQL editor (in order):
-# supabase/migrations/001_initial_schema.sql
-# supabase/migrations/002_avatars_storage.sql
-# supabase/migrations/003_remove_auto_profile.sql
-# supabase/migrations/004_users_insert_policy.sql
-# supabase/migrations/005_post_expansion.sql
-# supabase/migrations/005_swaps_schema.sql
-# supabase/migrations/006_follows_schema.sql
-# supabase/migrations/007_ratings_schema.sql
-# supabase/migrations/008_meetup_location.sql
-
-# Start the app
-npm start
 ```
 
-### Running on a device
+### 2. Create a Supabase project
+
+1. Go to [supabase.com](https://supabase.com) and sign in with GitHub
+2. Click **New project**, name it `readrr`
+3. Once created, go to **Settings → API** and copy:
+   - **Project URL** (e.g. `https://xxxxxxxxxxxx.supabase.co`)
+   - **anon public** key (starts with `eyJ...`)
+
+### 3. Create your `.env` file
+
+In the root of the project create a file named `.env`:
+
+```
+EXPO_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+```
+
+This file is gitignored — never commit it.
+
+### 4. Run the database migrations
+
+1. In your Supabase project, open **SQL Editor → New query**
+2. Open `supabase/combined_setup.sql` in VS Code, select all, copy
+3. Paste into the SQL Editor and click **Run**
+
+That creates all tables, storage buckets, RLS policies, and triggers in one go.
+
+### 5. Disable email confirmation (recommended for development)
+
+In Supabase go to **Authentication → Providers → Email** and toggle off **Confirm email**. This lets you sign up and go straight into the app without needing to click a confirmation link.
+
+### 6. Start the app
+
 ```bash
-npm run ios      # iOS simulator
-npm run android  # Android emulator
+npx expo start --clear
 ```
 
-Push notifications require a real device (not a simulator).
+Scan the QR code with Expo Go on your phone.
 
 ---
 
@@ -114,22 +125,38 @@ src/
 ├── navigation/       # React Navigation setup
 ├── screens/
 │   ├── auth/         # Sign in, sign up, welcome
-│   ├── main/         # Feed, search, inbox, chat, book detail
+│   ├── main/         # Feed, search, inbox, chat, notifications
 │   ├── onboarding/   # Profile setup, first post
 │   └── profile/      # Own profile, other user profile, edit
 ├── services/         # API and Supabase service functions
 └── store/            # Zustand auth store
 supabase/
-└── migrations/       # SQL migration files
+├── combined_setup.sql   # Single-file DB setup (run this)
+└── migrations/          # Individual migration files (for reference)
+```
+
+---
+
+## Branch workflow
+
+We work on feature branches, never directly on `main`.
+
+```bash
+# Start new work
+git checkout main
+git pull origin main
+git checkout -b your-name/feature-name
+
+# Push when ready
+git push origin your-name/feature-name
+# Then open a Pull Request on GitHub
 ```
 
 ---
 
 ## Roadmap
 
-- [ ] Post deletion and listing management
 - [ ] Nearby books feed (location-based)
-- [ ] Notification centre screen
-- [ ] Report / block user
 - [ ] Following-based feed filter
+- [ ] Report / block user
 - [ ] Stripe subscription tier
